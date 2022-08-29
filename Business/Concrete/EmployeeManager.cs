@@ -1,7 +1,9 @@
 ﻿using Business.Abstract;
+using Business.Constants;
 using Business.ValidationRules.FluentValidation;
 using Core.Aspects.Autofac.Validation;
 using Core.CrossCuttingConcerns.Validation;
+using Core.Utilities.Business;
 using Core.Utilities.Results;
 using DataAccess.Abstract;
 using Entities.Concrete;
@@ -33,14 +35,29 @@ namespace Business.Concrete
         [ValidationAspect(typeof(EmployeeValidator))]
         public IResult Add(Employee employee)
         {
+           IResult result= BusinessRules.Run(CheckNameExist(employee.FirstName),  //İş kuralları
+                CheckEmployeeCount());
+            if (result != null)
+            {
+                return result;
+            }
+
             _employeeDal.Add(employee);
-            return new SuccessResult("Çalışan eklendi");
+            return new SuccessResult(Messages.EmployeeAdded);
+      
+
         }
 
         [ValidationAspect(typeof(EmployeeValidator))]
         public IResult Update(Employee employee)
         {
-           
+            IResult result = BusinessRules.Run(CheckNameExist(employee.FirstName),  //İş kuralları
+                CheckEmployeeCount());
+            if (result != null)
+            {
+                return result;
+            }
+
             _employeeDal.Update(employee);
             return new SuccessResult("Çalışan bilgisi güncellendi");
         }
@@ -52,5 +69,24 @@ namespace Business.Concrete
             return new SuccessResult("Çalışan silindi");
         }
 
+        private IResult CheckEmployeeCount()
+        {
+            var result = _employeeDal.GetAll().Count;
+            if (result > 150)
+            {
+                return new ErrorResult(Messages.EmployeeCountError);
+            }
+            return new SuccessResult();
+        }
+
+        private IResult CheckNameExist(string name)
+        {
+            var result = _employeeDal.GetAll(p=>p.FirstName==name).Count;
+            if (result > 0)
+            {
+                return new ErrorResult(Messages.EmployeeNameExistError);
+            }
+            return new SuccessResult();
+        }
     }
 }
