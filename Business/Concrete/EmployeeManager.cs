@@ -1,4 +1,5 @@
 ﻿using Business.Abstract;
+using Business.BussinessAspect.Autofac;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
 using Core.Aspects.Autofac.Validation;
@@ -31,7 +32,7 @@ namespace Business.Concrete
 
             return new SuccessDataResult<List<Employee>>(result.ToList());
         }
-
+        [SecuredOperation("product.add,admin")]
         [ValidationAspect(typeof(EmployeeValidator))]
         public IResult Add(Employee employee)
         {
@@ -59,7 +60,7 @@ namespace Business.Concrete
             }
 
             _employeeDal.Update(employee);
-            return new SuccessResult("Çalışan bilgisi güncellendi");
+            return new SuccessResult(Messages.EmployeeUpdated);
         }
 
         public IResult Delete(Employee employee)
