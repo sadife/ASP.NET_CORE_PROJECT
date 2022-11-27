@@ -2,7 +2,13 @@
 using Business.BussinessAspect.Autofac;
 using Business.Constants;
 using Business.ValidationRules.FluentValidation;
+using Core.Aspects;
+using Core.Aspects.Autofac;
 using Core.Aspects.Autofac.Validation;
+using Core.Aspects.Caching;
+using Core.Aspects.Performance;
+using Core.Aspects.Transaction;
+using Core.CrossCuttingConcerns.Caching;
 using Core.CrossCuttingConcerns.Validation;
 using Core.Utilities.Business;
 using Core.Utilities.Results;
@@ -24,6 +30,8 @@ namespace Business.Concrete
         {
             _employeeDal = employeeeDal;
         }
+
+        [CacheAspect]
         public IDataResult<List<Employee>> GetAll()
         {
             var result = _employeeDal.GetAll();
@@ -32,12 +40,17 @@ namespace Business.Concrete
 
             return new SuccessDataResult<List<Employee>>(result.ToList());
         }
-        [SecuredOperation("product.add,admin")]
+
+
+       
+        [CacheRemoveAspect("IEmployeeService.Get")]
+        [SecuredOperation("Employee.Add,Admin")]
+        [TransactionScopeAspect]
+        [PerformanceAspect(5)]   //5 saniyeden uzun sürüyorsa uyarı verecek şekilde ayarlandı.
         [ValidationAspect(typeof(EmployeeValidator))]
         public IResult Add(Employee employee)
         {
-           IResult result= BusinessRules.Run(CheckNameExist(employee.FirstName),  //İş kuralları
-                CheckEmployeeCount());
+           IResult result= BusinessRules.Run(CheckNameExist(employee.FirstName),CheckEmployeeCount());
             if (result != null)
             {
                 return result;
@@ -49,11 +62,13 @@ namespace Business.Concrete
 
         }
 
+        [TransactionScopeAspect]
+        [CacheRemoveAspect("IEmployeeService.Update")]
         [ValidationAspect(typeof(EmployeeValidator))]
+        [PerformanceAspect(5)]
         public IResult Update(Employee employee)
         {
-            IResult result = BusinessRules.Run(CheckNameExist(employee.FirstName),  //İş kuralları
-                CheckEmployeeCount());
+            IResult result = BusinessRules.Run(CheckNameExist(employee.FirstName), CheckEmployeeCount());
             if (result != null)
             {
                 return result;
@@ -63,6 +78,10 @@ namespace Business.Concrete
             return new SuccessResult(Messages.EmployeeUpdated);
         }
 
+
+        [TransactionScopeAspect]
+        [CacheRemoveAspect("IEmployeeService.Delete")]
+        [PerformanceAspect(5)]
         public IResult Delete(Employee employee)
         {
            
@@ -70,6 +89,7 @@ namespace Business.Concrete
             return new SuccessResult("Çalışan silindi");
         }
 
+        
         private IResult CheckEmployeeCount()
         {
             var result = _employeeDal.GetAll().Count;
